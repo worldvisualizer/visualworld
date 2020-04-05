@@ -1,0 +1,12 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "World Visualizer Root Stack - Nest Stacks Connection",
+    
+    "Metadata": {},
+    "Parameters": {
+        "RDSClusterPassword": {
+            "Description": "RDSCluster master user password",
+            "Type": "String",
+            "Default": "visualvisual",
+            "NoEcho": true
+        },
