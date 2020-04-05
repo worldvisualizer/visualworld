@@ -1,0 +1,128 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "World Visualizer Root Stack - Nested Stacks Connection",
+    "Metadata": {
+    },
+    
+    "Parameters": {
+        "AvailabilityZones": {
+            "Type": "CommaDelimitedList",
+            "Description": "Two availability zones that should be used for availability zone assignments",
+            "Default": "ap-northeast-2a,ap-northeast-2c"
+        }
+    },
+    
+    "Mappings": {
+        "VPC": {
+            "CidrBlockHeader": {
+                "WorldVisualizerVPC": "10.11."
+            },
+            "CidrBlockFooter": {
+                "VPC": "0.0/16",
+                "Private": ["0.0/24", "1.0/24", "2.0/24", "3.0/24", "4.0/24"],
+                "Public": ["10.0/24", "11.0/24", "12.0/24", "13.0/24", "14.0/24"]
+            }
+        }
+    },
+    
+    "Resources": {
+        "WorldVisualizerVPC": {
+            "Type": "AWS::EC2::VPC",
+            "Properties": {
+                "CidrBlock": {"Fn::Join": ["", [
+                    {"Fn::FindInMap": ["VPC", "CidrBlockHeader", "WorldVisualizerVPC"]},
+                    {"Fn::FindInMap": ["VPC", "CidrBlockFooter", "VPC"]}
+                ]]},
+                "EnableDnsSupport": "true", "EnableDnsHostnames": "false",
+                "Tags": [{"Key": "Name", "Value": "PublicVPC"}]
+            }
+        },
+        "WorldVisualizerVPCPublicSubnet": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "AvailabilityZone": {"Fn::Select": ["0", {"Ref": "AvailabilityZones"}]},
+                "CidrBlock": {"Fn::Join": ["", [
+                    {"Fn::FindInMap": ["VPC", "CidrBlockHeader", "WorldVisualizerVPC"]},
+                    {"Fn::Select" : ["0", {"Fn::FindInMap": ["VPC", "CidrBlockFooter", "Public"]}]}
+                ]]},
+                "MapPublicIpOnLaunch": "false",
+                "Tags": [{"Key": "Name", "Value": "WorldVisualizerVPC Public Subnet"}],
+                "VpcId": {"Ref": "WorldVisualizerVPC"}
+            }
+        },
+        "WorldVisualizerVPCPrivateSubnet": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "AvailabilityZone": {"Fn::Select": ["0", {"Ref": "AvailabilityZones"}]},
+                "CidrBlock": {"Fn::Join": ["", [
+                    {"Fn::FindInMap": ["VPC", "CidrBlockHeader", "WorldVisualizerVPC"]},
+                    {"Fn::Select" : ["0", {"Fn::FindInMap": ["VPC", "CidrBlockFooter", "Private"]}]}
+                ]]},
+                "MapPublicIpOnLaunch": "false",
+                "Tags": [{"Key": "Name", "Value": "WorldVisualizerVPC Private Subnet"}],
+                "VpcId": {"Ref": "WorldVisualizerVPC"}
+            }
+        },
+        "WorldVisualizerVPCRouteTable": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {"Ref": "WorldVisualizerVPC"},
+                "Tags": [{"Key": "Name", "Value": "WorldVisualizerVPC RouteTable"}]
+            },
+            "DependsOn": ["WorldVisualizerVPC"]
+        },
+        "WorldVisualizerVPCPublicSubnetRouteTable": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {"Ref": "WorldVisualizerVPC"},
+                "Tags": [{"Key": "Name", "Value": "WorldVisualizerVPC PublicSubnet RouteTable"}]
+            },
+            "DependsOn": ["WorldVisualizerVPCPublicSubnet"]
+        },
+        "WorldVisualizerVPCPrivateSubnetRouteTable": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {"Ref": "WorldVisualizerVPC"},
+                "Tags": [{"Key": "Name", "Value": "WorldVisualizerVPC PrivateSubnet RouteTable"}]
+            },
+            "DependsOn": ["WorldVisualizerVPCPrivateSubnet"]
+        },
+        "WorldVisualizerVPCInternetGateway": {
+            "Type": "AWS::EC2::InternetGateway",
+            "Properties": {
+                "Tags": [{"Key": "Name", "Value": "Internet Gateway for WorldVisualizerVPC"}]
+            },
+            "DependsOn": ["WorldVisualizerVPC"]
+        },
+        "WorldVisualizerVPCInternetGatewayAttachment": {
+            "Type": "AWS::EC2::VPCGatewayAttachment",
+            "Properties": {
+                "InternetGatewayId": {"Ref": "WorldVisualizerVPCInternetGateway"},
+                "VpcId": {"Ref": "WorldVisualizerVPC"}
+            },
+            "DependsOn": ["WorldVisualizerVPC", "WorldVisualizerVPCInternetGateway"]
+        },
+        "WorldVisualizerVPCRouteToInternetGateway": {
+          "Type": "AWS::EC2::Route",
+          "Properties": {
+              "DestinationCidrBlock": "0.0.0.0/0",
+              "RouteTableId": {"Ref": "WorldVisualizerVPCRouteTable"},
+              "GatewayId": {"Ref": "WorldVisualizerVPCInternetGateway"}
+          },
+          "DependsOn": "WorldVisualizerVPCInternetGatewayAttachment"
+        },
+        "WorldVisualizerVPCPublicSubnetRouteTableAssociation": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "RouteTableId": {"Ref": "WorldVisualizerVPCPublicSubnetRouteTable"},
+                "SubnetId": {"Ref": "WorldVisualizerVPCPublicSubnet"}
+            }
+        },
+        "WorldVisualizerVPCPrivateSubnetRouteTableAssociation": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "RouteTableId": {"Ref": "WorldVisualizerVPCPrivateSubnetRouteTable"},
+                "SubnetId": {"Ref": "WorldVisualizerVPCPrivateSubnet"}
+            }
+        },
+    }

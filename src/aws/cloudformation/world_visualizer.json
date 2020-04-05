@@ -1,6 +1,6 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "World Visualizer Root Stack - Nest Stacks Connection",
+    "Description": "World Visualizer Root Stack - Nested Stacks Connection",
     
     "Metadata": {},
     "Parameters": {
@@ -10,3 +10,56 @@
             "Default": "visualvisual",
             "NoEcho": true
         },
+        "NetworkStackS3Url": {
+          "Type": "String",
+          "Description": "URL of Network Stack AWS CloudFormation template in S3",
+          "Default": "https://s3-ap-northeast-2.amazonaws.com/world-visualizer-cloudformation/world_visualizer_network.json"
+        },
+        "ResourcesStackS3Url": {
+          "Type": "String",
+          "Description": "URL of Resource Stack AWS CloudFormation template in S3",
+          "Default": "https://s3-ap-northeast-2.amazonaws.com/world-visualizer-cloudformation/world_visualizer_resources.json"
+        },
+        "WebServicesStackS3Url": {
+          "Type": "String",
+          "Description": "URL of Web Services Stack AWS CloudFormation template in S3",
+          "Default": "https://s3-ap-northeast-2.amazonaws.com/world-visualizer-cloudformation/world_visualizer_web_services.json"
+        }
+    },
+    
+    "Mappings": {
+        
+    },
+    
+    "Resources": {
+        "NetworkStack": {
+            "Type" : "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": {"Ref": "NetworkStackS3Url"},
+                "Parameters": {
+                    
+                }
+          },
+          "DependsOn": []
+        },
+        "ResourcesStack": {
+            "Type" : "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": {"Ref": "ResourcesStackS3Url"},
+                "Parameters": {
+                    "RDSClusterPassword": {"Ref": "RDSClusterPassword"},
+                }
+          },
+          "DependsOn": []
+        },
+        "WebServicesStack": {
+            "Type" : "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": {"Ref": "WebServicesStackS3Url"},
+                "Parameters": {
+                }
+          },
+          "DependsOn": []
+        }
+    }
+}
