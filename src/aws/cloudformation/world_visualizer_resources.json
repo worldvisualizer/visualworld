@@ -1,0 +1,140 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "World Visualizer Resources Stack: RDS, Cerficate, CF, S3",
+    "Metadata": {
+    },
+    
+    "Parameters": {
+        "AvailabilityZones": {
+            "Type": "CommaDelimitedList",
+            "Description": "Two availability zones that should be used for availability zone assignments",
+            "Default": "ap-northeast-2a,ap-northeast-2c"
+        },
+        "RDSInstanceType": {
+            "Type": "String",
+            "Description": "RDSDBInstance size",
+            "Default": "db.t2.micro"
+        },
+        "RDSClusterPassword": {
+            "Type": "String",
+            "Description": "RDSCluster master user password",
+            "Default": "visualvisual",
+            "NoEcho": true
+        },
+        "WorldVisualizerVPCPrivateSubnetId": {
+            "Type": "String",
+            "Description": "WorldVisualizerVPC PrivateSubnetId"
+        },
+        "WorldVisualizerVPCRDSSecurityGroupId": {
+            "Type": "String",
+            "Description": "WorldVisualizerVPCRDSSecurityGroupId"
+        },
+        "AuroraPortNumber": {
+            "Type": "String",
+            "Description": "RDS AuroraPortNumber",
+            "Default": 3306
+        }
+    },
+    
+    "Mappings": {
+    },
+    
+    "Resources": {
+        "WorldVisualizerRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [{
+                        "Effect": "Allow",
+                        "Principal": { "Service": [
+                            "ec2.amazonaws.com"
+                        ]},
+                        "Action": ["sts:AssumeRole"]
+                    }]
+                },
+                "ManagedPolicyArns":[],
+                "Path": "/"
+            }
+        },
+
+        "WorldVisualizerRDSDBClusterParameterGroup": {
+            "Type" : "AWS::RDS::DBClusterParameterGroup",
+            "Properties" : {
+                "Description" : "RDS DBClusterParameterGroup",
+                "Family" : "aurora5.6",
+                "Parameters" : {
+                    "character_set_database": "utf8",
+                    "time_zone": "UTC",
+                    "innodb_autoinc_lock_mode": "2",
+                    "server_audit_logging": "1",
+                    "server_audit_events": "CONNECT,QUERY,TABLE",
+                    "server_audit_excl_users": "rdsadmin"
+                },
+                "Tags" : [{"Key": "Name", "Value": "WorldVisualizer RDS DBClusterParameterGroup"}]
+            }
+        },
+        "WorldVisualizerRDSDBSubnetGroup": {
+            "Type" : "AWS::RDS::DBSubnetGroup",
+            "Properties" : {
+                "DBSubnetGroupDescription" : "RDS DBSubnetGroup",
+                "SubnetIds" : [
+                    {"Ref": "WorldVisualizerVPCPrivateSubnetId"}
+                ],
+                "Tags" : [{"Key": "Name", "Value": "WorldVisualizerVPC Private Subnet RDS DBSubnetGroup"}]
+            }
+        },
+        "WorldVisualizerRDSDBParameterGroup": {
+            "Type" : "AWS::RDS::DBParameterGroup",
+            "Properties" : {
+                "Description" : "RDS DBParameterGroup",
+                "Family" : "aurora5.6",
+                "Parameters" : {
+                    "slow_query_log": 1,
+                    "autocommit": 0,
+                    "tx_isolation": "READ-COMMITTED",
+                    "sql_mode": "IGNORE_SPACE",
+                    "event_scheduler": "ON",
+                    "wait_timeout": "8640000",
+                    "max_connections": "10000",
+                    "max_allowed_packet": "1073741824"
+                },
+                "Tags" : [{"Key": "Name", "Value": "GOPAX PrivateVPC RDS DBParameterGroup"}]
+            }
+        },
+        "WorldVisualizerRDSCluster": {
+            "Type": "AWS::RDS::DBCluster",
+            "Properties": {
+                "AvailabilityZones" : [
+                    {"Fn::Select": ["0", {"Ref": "AvailabilityZones"}]}
+                ],
+                "BackupRetentionPeriod": "35",
+                "DatabaseName": "WorldVisualizerRDS",
+                "DBClusterParameterGroupName": {"Ref": "WorldVisualizerRDSDBClusterParameterGroup"},
+                "DBSubnetGroupName": {"Ref": "WorldVisualizerRDSDBSubnetGroup"},
+                "Engine": "aurora",
+                "EngineVersion": "5.6.10a",
+                "MasterUsername": "worldvis",
+                "MasterUserPassword": {"Ref": "RDSClusterPassword"},
+                "Port": {"Ref": "AuroraPortNumber"},
+                "PreferredBackupWindow": "05:00-05:30",
+                "PreferredMaintenanceWindow": "Wed:13:00-Wed:13:30",
+                "StorageEncrypted" : "false",
+                "Tags": [{"Key": "Name", "Value": "WorldVisualizer RDS DBCluster"}],
+                "VpcSecurityGroupIds" : [{"Ref": "WorldVisualizerVPCRDSSecurityGroupId"}]
+            }
+        },
+        "WorldVisualizerRDSDBInstance": {
+            "Type": "AWS::RDS::DBInstance",
+            "Properties": {
+                "DBSubnetGroupName": {"Ref": "WorldVisualizerRDSDBSubnetGroup"},
+                "DBParameterGroupName": {"Ref": "WorldVisualizerRDSDBParameterGroup"},
+                "Engine": "aurora",
+                "DBClusterIdentifier": {"Ref": "WorldVisualizerRDSCluster"},
+                "PubliclyAccessible": "false",
+                "AvailabilityZone": {"Fn::Select": ["0", {"Ref": "AvailabilityZones"}]},
+                "DBInstanceClass": {"Ref": "RDSInstanceType"}
+            }
+        }
+    }
+}

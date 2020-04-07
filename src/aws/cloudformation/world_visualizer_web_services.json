@@ -1,0 +1,37 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "World Visualizer Web Services Stack: API Gateway, Endpoint, Lambda",
+    "Metadata": {
+    },
+    
+    "Parameters": {
+        "AvailabilityZones": {
+            "Type": "CommaDelimitedList",
+            "Description": "Two availability zones that should be used for availability zone assignments",
+            "Default": "ap-northeast-2a,ap-northeast-2c"
+        }
+    },
+    
+    "Mappings": {
+    },
+    
+    "Resources": {
+        "WorldVisualizerWebServiceRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [{
+                        "Effect": "Allow",
+                        "Principal": { "Service": [
+                            "ec2.amazonaws.com"
+                        ]},
+                        "Action": ["sts:AssumeRole"]
+                    }]
+                },
+                "ManagedPolicyArns":[],
+                "Path": "/"
+            }
+        }
+    }
+}

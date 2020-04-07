@@ -9,6 +9,31 @@
             "Type": "CommaDelimitedList",
             "Description": "Two availability zones that should be used for availability zone assignments",
             "Default": "ap-northeast-2a,ap-northeast-2c"
+        },
+        "HttpPortNumber": {
+            "Type": "String",
+            "Description": "External HTTP PortNumber",
+            "Default": 80
+        },
+        "HttpsPortNumber": {
+            "Type": "String",
+            "Description": "External HTTPS PortNumber",
+            "Default": 443
+        },
+        "NtpPortNumber": {
+            "Type": "String",
+            "Description": "AWS NTP Service PortNumber",
+            "Default": 123
+        },
+        "SshPortNumber": {
+            "Type": "String",
+            "Description": "External SSH Connection PortNumber",
+            "Default": 22
+        },
+        "AuroraPortNumber": {
+            "Type": "String",
+            "Description": "RDS AuroraPortNumber",
+            "Default": 3306
         }
     },
     
@@ -125,4 +150,108 @@
                 "SubnetId": {"Ref": "WorldVisualizerVPCPrivateSubnet"}
             }
         },
+        
+        "WorldVisualizerVPCEC2SecurityGroup": {
+            "Type" : "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "SecurityGroup for WorldVisualizerVPC",
+                "SecurityGroupEgress": [
+                    {
+                        "IpProtocol" : "tcp",
+                        "FromPort" : {"Ref": "HttpPortNumber"},
+                        "ToPort" : {"Ref": "HttpPortNumber"},
+                        "CidrIp" : "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol" : "tcp",
+                        "FromPort" : {"Ref": "HttpsPortNumber"},
+                        "ToPort" : {"Ref": "HttpsPortNumber"},
+                        "CidrIp" : "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol" : "udp",
+                        "FromPort" : {"Ref": "NtpPortNumber"},
+                        "ToPort" : {"Ref": "NtpPortNumber"},
+                        "CidrIp" : "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": {"Ref": "AuroraPortNumber"},
+                        "ToPort": {"Ref": "AuroraPortNumber"},
+                        "SourceSecurityGroupId": {"Fn::GetAtt": ["WorldVisualizerVPCRDSSecurityGroup", "GroupId"]}
+                    }
+                ],
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol" : "tcp",
+                        "FromPort" : {"Ref": "HttpsPortNumber"},
+                        "ToPort" : {"Ref": "HttpsPortNumber"},
+                        "CidrIp" : "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol" : "tcp",
+                        "FromPort" : {"Ref": "SshPortNumber"},
+                        "ToPort" : {"Ref": "SshPortNumber"},
+                        "CidrIp" : "0.0.0.0/0"
+                    }
+
+                ],
+                "Tags": [{"Key": "Name", "Value": "WorldVisualizerVPC EC2 Security Group"}],
+                "VpcId": {"Ref": "WorldVisualizerVPC"}
+            }
+        },
+        "WorldVisualizerVPCLambdaToRDSSecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "SecurityGroup for Lambda to RDS traffic",
+                "Tags": [{"Key": "Name", "Value": "WorldVisualizerVPC Lambda Security Group"}],
+                "SecurityGroupEgress": [
+                    {
+                        "IpProtocol" : "tcp",
+                        "FromPort" : {"Ref": "AuroraPortNumber"},
+                        "ToPort" : {"Ref": "AuroraPortNumber"},
+                        "CidrIp" : {"Fn::Join": ["", [
+                            {"Fn::FindInMap": ["VPC", "CidrBlockHeader", "WorldVisualizerVPC"]},
+                            {"Fn::FindInMap": ["VPC", "CidrBlockFooter", "VPC"]}
+                        ]]}
+                    }
+                ],
+                "VpcId": {"Ref": "WorldVisualizerVPC"}
+            }
+        },
+        "WorldVisualizerVPCRDSSecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "SecurityGroup for RDS instances in WorldVisualizerVPC",
+                "SecurityGroupEgress": [],
+                "SecurityGroupIngress": [],
+                "Tags": [{"Key": "Name", "Value": "WorldVisualizerVPC RDS Security Group"}],
+                "VpcId": {"Ref": "WorldVisualizerVPC"}
+            }
+        },
+        "WorldVisualizerVPCRDSSecurityGroupIngressFromEC2SecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "Properties": {
+                "GroupId": {"Fn::GetAtt": ["WorldVisualizerVPCRDSSecurityGroup", "GroupId"]},
+                "SourceSecurityGroupId": {"Fn::GetAtt": ["WorldVisualizerVPCEC2SecurityGroup", "GroupId"]},
+                "FromPort": {"Ref": "AuroraPortNumber"},
+                "ToPort": {"Ref": "AuroraPortNumber"},
+                "IpProtocol": "tcp"
+            }
+        },
+        "WorldVisualizerVPCRDSSecurityGroupIngressFromLambdaSecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "Properties": {
+                "GroupId": {"Fn::GetAtt": ["WorldVisualizerVPCRDSSecurityGroup", "GroupId"]},
+                "SourceSecurityGroupId": {"Fn::GetAtt": ["WorldVisualizerVPCLambdaToRDSSecurityGroup", "GroupId"]},
+                "FromPort": {"Ref": "AuroraPortNumber"},
+                "ToPort": {"Ref": "AuroraPortNumber"},
+                "IpProtocol": "tcp"
+            }
+        }
+    },
+    "Outputs": {
+        "WorldVisualizerVPCPrivateSubnetId": { "Value": { "Ref": "WorldVisualizerVPCPrivateSubnet"}, "Description": "Subnet ID of WorldVisualizerVPC Private Subnet"},
+        "WorldVisualizerVPCRDSSecurityGroupId": {"Value": {"Fn::GetAtt": ["WorldVisualizerVPCRDSSecurityGroup", "GroupId"]}, "Description": "Security Group ID of WorldVisualizerVPCRDSSecurityGroup"}
     }
+}
