@@ -75,16 +75,29 @@
                 "VpcId": {"Ref": "WorldVisualizerVPC"}
             }
         },
-        "WorldVisualizerVPCPrivateSubnet": {
+        "WorldVisualizerVPCPrivateFirstAZSubnet": {
             "Type": "AWS::EC2::Subnet",
             "Properties": {
                 "AvailabilityZone": {"Fn::Select": ["0", {"Ref": "AvailabilityZones"}]},
                 "CidrBlock": {"Fn::Join": ["", [
                     {"Fn::FindInMap": ["VPC", "CidrBlockHeader", "WorldVisualizerVPC"]},
-                    {"Fn::Select" : ["0", {"Fn::FindInMap": ["VPC", "CidrBlockFooter", "Private"]}]}
+                    {"Fn::Select" : ["1", {"Fn::FindInMap": ["VPC", "CidrBlockFooter", "Private"]}]}
                 ]]},
                 "MapPublicIpOnLaunch": "false",
-                "Tags": [{"Key": "Name", "Value": "WorldVisualizerVPC Private Subnet"}],
+                "Tags": [{"Key": "Name", "Value": "WorldVisualizerVPC Private Subnet 1st AZ"}],
+                "VpcId": {"Ref": "WorldVisualizerVPC"}
+            }
+        },
+        "WorldVisualizerVPCPrivateSecondAZSubnet": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "AvailabilityZone": {"Fn::Select": ["1", {"Ref": "AvailabilityZones"}]},
+                "CidrBlock": {"Fn::Join": ["", [
+                    {"Fn::FindInMap": ["VPC", "CidrBlockHeader", "WorldVisualizerVPC"]},
+                    {"Fn::Select" : ["2", {"Fn::FindInMap": ["VPC", "CidrBlockFooter", "Private"]}]}
+                ]]},
+                "MapPublicIpOnLaunch": "false",
+                "Tags": [{"Key": "Name", "Value": "WorldVisualizerVPC Private Subnet 2nd AZ"}],
                 "VpcId": {"Ref": "WorldVisualizerVPC"}
             }
         },
@@ -104,13 +117,21 @@
             },
             "DependsOn": ["WorldVisualizerVPCPublicSubnet"]
         },
-        "WorldVisualizerVPCPrivateSubnetRouteTable": {
+        "WorldVisualizerVPCPrivateFirstAZSubnetRouteTable": {
             "Type": "AWS::EC2::RouteTable",
             "Properties": {
                 "VpcId": {"Ref": "WorldVisualizerVPC"},
-                "Tags": [{"Key": "Name", "Value": "WorldVisualizerVPC PrivateSubnet RouteTable"}]
+                "Tags": [{"Key": "Name", "Value": "WorldVisualizerVPC PrivateFirstAZSubnet RouteTable"}]
             },
-            "DependsOn": ["WorldVisualizerVPCPrivateSubnet"]
+            "DependsOn": ["WorldVisualizerVPCPrivateFirstAZSubnet"]
+        },
+        "WorldVisualizerVPCPrivateSecondAZSubnetRouteTable": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {"Ref": "WorldVisualizerVPC"},
+                "Tags": [{"Key": "Name", "Value": "WorldVisualizerVPC PrivateSecondAZSubnet RouteTable"}]
+            },
+            "DependsOn": ["WorldVisualizerVPCPrivateSecondAZSubnet"]
         },
         "WorldVisualizerVPCInternetGateway": {
             "Type": "AWS::EC2::InternetGateway",
@@ -143,11 +164,18 @@
                 "SubnetId": {"Ref": "WorldVisualizerVPCPublicSubnet"}
             }
         },
-        "WorldVisualizerVPCPrivateSubnetRouteTableAssociation": {
+        "WorldVisualizerVPCPrivateFirstAZSubnetRouteTableAssociation": {
             "Type": "AWS::EC2::SubnetRouteTableAssociation",
             "Properties": {
-                "RouteTableId": {"Ref": "WorldVisualizerVPCPrivateSubnetRouteTable"},
-                "SubnetId": {"Ref": "WorldVisualizerVPCPrivateSubnet"}
+                "RouteTableId": {"Ref": "WorldVisualizerVPCPrivateFirstAZSubnetRouteTable"},
+                "SubnetId": {"Ref": "WorldVisualizerVPCPrivateFirstAZSubnet"}
+            }
+        },
+        "WorldVisualizerVPCPrivateSecondAZSubnetRouteTableAssociation": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "RouteTableId": {"Ref": "WorldVisualizerVPCPrivateSecondAZSubnetRouteTable"},
+                "SubnetId": {"Ref": "WorldVisualizerVPCPrivateSecondAZSubnet"}
             }
         },
         
@@ -251,7 +279,8 @@
         }
     },
     "Outputs": {
-        "WorldVisualizerVPCPrivateSubnetId": { "Value": { "Ref": "WorldVisualizerVPCPrivateSubnet"}, "Description": "Subnet ID of WorldVisualizerVPC Private Subnet"},
+        "WorldVisualizerVPCPrivateFirstAZSubnetId": { "Value": { "Ref": "WorldVisualizerVPCPrivateFirstAZSubnet"}, "Description": "Subnet ID of WorldVisualizerVPC Private Subnet 1st AZ"},
+        "WorldVisualizerVPCPrivateSecondAZSubnetId": { "Value": { "Ref": "WorldVisualizerVPCPrivateSecondAZSubnet"}, "Description": "Subnet ID of WorldVisualizerVPC Private Subnet 2nd AZ"},
         "WorldVisualizerVPCRDSSecurityGroupId": {"Value": {"Fn::GetAtt": ["WorldVisualizerVPCRDSSecurityGroup", "GroupId"]}, "Description": "Security Group ID of WorldVisualizerVPCRDSSecurityGroup"}
     }
 }

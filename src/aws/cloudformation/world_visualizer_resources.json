@@ -13,7 +13,7 @@
         "RDSInstanceType": {
             "Type": "String",
             "Description": "RDSDBInstance size",
-            "Default": "db.t2.micro"
+            "Default": "db.t2.medium"
         },
         "RDSClusterPassword": {
             "Type": "String",
@@ -21,9 +21,13 @@
             "Default": "visualvisual",
             "NoEcho": true
         },
-        "WorldVisualizerVPCPrivateSubnetId": {
+        "WorldVisualizerVPCPrivateFirstAZSubnetId": {
             "Type": "String",
-            "Description": "WorldVisualizerVPC PrivateSubnetId"
+            "Description": "WorldVisualizerVPC PrivateSubnet 1st AZ Id"
+        },
+        "WorldVisualizerVPCPrivateSecondAZSubnetId": {
+            "Type": "String",
+            "Description": "WorldVisualizerVPC PrivateSubnet 2nd AZ Id"
         },
         "WorldVisualizerVPCRDSSecurityGroupId": {
             "Type": "String",
@@ -33,6 +37,11 @@
             "Type": "String",
             "Description": "RDS AuroraPortNumber",
             "Default": 3306
+        },
+        "StaticHostingS3BucketName": {
+            "Type": "String",
+            "Description": "Static Hosting Bucket Name",
+            "Default": "seungwoo.world.visualizer"
         }
     },
     
@@ -79,7 +88,8 @@
             "Properties" : {
                 "DBSubnetGroupDescription" : "RDS DBSubnetGroup",
                 "SubnetIds" : [
-                    {"Ref": "WorldVisualizerVPCPrivateSubnetId"}
+                    {"Ref": "WorldVisualizerVPCPrivateFirstAZSubnetId"},
+                    {"Ref": "WorldVisualizerVPCPrivateSecondAZSubnetId"}
                 ],
                 "Tags" : [{"Key": "Name", "Value": "WorldVisualizerVPC Private Subnet RDS DBSubnetGroup"}]
             }
@@ -99,7 +109,7 @@
                     "max_connections": "10000",
                     "max_allowed_packet": "1073741824"
                 },
-                "Tags" : [{"Key": "Name", "Value": "GOPAX PrivateVPC RDS DBParameterGroup"}]
+                "Tags" : [{"Key": "Name", "Value": "WorldVisualizer Main RDS DBParameterGroup"}]
             }
         },
         "WorldVisualizerRDSCluster": {
@@ -120,7 +130,7 @@
                 "PreferredBackupWindow": "05:00-05:30",
                 "PreferredMaintenanceWindow": "Wed:13:00-Wed:13:30",
                 "StorageEncrypted" : "false",
-                "Tags": [{"Key": "Name", "Value": "WorldVisualizer RDS DBCluster"}],
+                "Tags": [{"Key": "Name", "Value": "WorldVisualizer Main RDS DBCluster"}],
                 "VpcSecurityGroupIds" : [{"Ref": "WorldVisualizerVPCRDSSecurityGroupId"}]
             }
         },
@@ -135,6 +145,38 @@
                 "AvailabilityZone": {"Fn::Select": ["0", {"Ref": "AvailabilityZones"}]},
                 "DBInstanceClass": {"Ref": "RDSInstanceType"}
             }
+        },
+        
+        "StaticHostingS3Bucket" : {
+            "Type" : "AWS::S3::Bucket",
+            "Properties" : {
+                "AccessControl" : "Private",
+                "BucketName" : {"Ref": "StaticHostingS3BucketName"},
+                "WebsiteConfiguration" : {
+                    "IndexDocument" : "index.html",
+                    "ErrorDocument" : "error.html",
+                    "RoutingRules": []
+                }
+            },
+            "DeletionPolicy" : "Delete"
+        },
+        "StaticHostingS3BucketPolicy": {
+            "Type": "AWS::S3::BucketPolicy",
+            "Properties": {
+                "Bucket": {"Ref": "StaticHostingS3BucketName"},
+                "PolicyDocument": {
+                    "Statement": [
+                        {
+                            "Sid": "OriginAllow",
+                            "Effect": "Allow",
+                            "Principal": "*",
+                            "Action": "s3:GetObject",
+                            "Resource": {"Fn::Join": ["", ["arn:aws:s3:::", {"Ref": "StaticHostingS3Bucket"}, "/*"]]}
+                        }
+                    ]
+                }
+            },
+            "DependsOn": "StaticHostingS3Bucket"
         }
     }
 }

@@ -48,8 +48,11 @@
                 "TemplateURL": {"Ref": "ResourcesStackS3Url"},
                 "Parameters": {
                     "RDSClusterPassword": {"Ref": "RDSClusterPassword"},
-                    "WorldVisualizerVPCPrivateSubnetId": {"Fn::GetAtt": [
-                        "NetworkStack", "Outputs.WorldVisualizerVPCPrivateSubnetId"
+                    "WorldVisualizerVPCPrivateFirstAZSubnetId": {"Fn::GetAtt": [
+                        "NetworkStack", "Outputs.WorldVisualizerVPCPrivateFirstAZSubnetId"
+                    ]},
+                    "WorldVisualizerVPCPrivateSecondAZSubnetId": {"Fn::GetAtt": [
+                        "NetworkStack", "Outputs.WorldVisualizerVPCPrivateSecondAZSubnetId"
                     ]},
                     "WorldVisualizerVPCRDSSecurityGroupId": {"Fn::GetAtt": [
                         "NetworkStack", "Outputs.WorldVisualizerVPCRDSSecurityGroupId"
